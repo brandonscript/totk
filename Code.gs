@@ -1,4 +1,4 @@
-// v1 (alpha)
+// v1.0.2 (alpha)
 // Source control maintained at https://github.com/brandonscript/totk
 
 // Material groups
@@ -255,7 +255,7 @@ function updateAllSummaries() {
   summarizeCostsRows(dataRange)
 }
 
-function cleanInventoryCells() {
+function refreshArmorTracker() {
   var activeSheet = SpreadsheetApp.getActiveSheet();
   var trackerSheet = SpreadsheetApp.getActive().getSheetByName(TRACKER_SHEET_NAME);
   var armorSheet = SpreadsheetApp.getActive().getSheetByName(ARMOR_SHEET_NAME);
@@ -372,7 +372,7 @@ function refreshMaterials() {
 
 function onEdit() {
   updateDependentDropdowns();
-  cleanInventoryCells();
+  refreshArmorTracker();
   summarizeCostsRows();
 }
 
@@ -383,6 +383,10 @@ function onSelectionChange() {
 function onOpen() {
   buildMaterialsDict();
   updateAllSummaries();
-  cleanInventoryCells();
+  refreshArmorTracker();
   calculateMaterialSums();
 }
+
+
+
+
