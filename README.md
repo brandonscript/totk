@@ -3,6 +3,13 @@ This is the source control for Google Apps Script code for a Tears of the Kingdo
 
 Version: 1
 
+## Screenshots
+
+<img width="1000" alt="735AF14A-CCBC-4118-9832-36D7158A7748" src="https://github.com/brandonscript/totk/assets/1480253/78657cbf-00ae-4487-8be5-22ffcddabe8d">
+
+<img width="400" alt="6B013015-2CBD-4C05-B7EA-436D3EA68ACF" src="https://github.com/brandonscript/totk/assets/1480253/7333814f-2ba8-41a8-a9fc-d5c1ee9b0b8a">
+
+
 ## Contributing
 
 PRs are welcome, as well as issues related to the spreadsheet itself. Please be kind and inclusive.
