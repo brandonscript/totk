@@ -1,4 +1,4 @@
-// v1.0.2 (alpha)
+// v1.0.3 (alpha)
 // Source control maintained at https://github.com/brandonscript/totk
 
 // Material groups
@@ -166,61 +166,64 @@ function updateDependentDropdowns() {
 
 function summarizeCostsRows(range) {
 
-  buildMaterialsDict();
-  getCostsCols();
-  var colOffset = 5
+  Singleton(() => {
 
-  var sheet = SpreadsheetApp.getActiveSheet();
-  var sheetName = sheet.getName();
+    buildMaterialsDict();
+    getCostsCols();
+    var colOffset = 5
 
-  if (sheetName !== COSTS_SHEET_NAME) {
-    return
-  }
+    var sheet = SpreadsheetApp.getActiveSheet();
+    var sheetName = sheet.getName();
 
-  var currentRange = range ?? sheet.getActiveRange();
-  var startRow = currentRange.getRow();
-  var numRows = currentRange.getNumRows();
-  var endRow = startRow + numRows
+    if (sheetName !== COSTS_SHEET_NAME) {
+      return
+    }
 
-  let summaries = []
+    var currentRange = range ?? sheet.getActiveRange();
+    var startRow = currentRange.getRow();
+    var numRows = currentRange.getNumRows();
+    var endRow = startRow + numRows
 
-  const batchSize = Math.min(4, endRow - startRow)
+    let summaries = []
 
-  for (var row = startRow; row < endRow; row++) {
-    let summary = [];
+    const batchSize = Math.min(4, endRow - startRow)
 
-    var partRange = sheet.getRange(row, SUMMARY_COL + 1, 1, NUM_COSTS_COLS)
-    var parts = partRange.getValues();
+    for (var row = startRow; row < endRow; row++) {
+      let summary = [];
 
-    for (var col = 1; col <= NUM_COSTS_COLS; col++) {
+      var partRange = sheet.getRange(row, SUMMARY_COL + 1, 1, NUM_COSTS_COLS)
+      var parts = partRange.getValues();
 
-      var value = parts[0][col - 1];
-      if (!value) {
-        continue 
+      for (var col = 1; col <= NUM_COSTS_COLS; col++) {
+
+        var value = parts[0][col - 1];
+        if (!value) {
+          continue 
+        }
+        var colTitle = cleanMaterialKey(sheet.getRange(1, col + colOffset).getValue());
+
+        if (colTitle === "rupee" && [10, 50, 200, 500].includes(value)) {
+          // ignore default pricing
+          continue;
+        }
+        var colDisplayTitle = MATERIALS_DICT?.[colTitle]
+
+        // var qtyStr = value < 10 ? value.toString().padStart(3) : value.toString();
+        summary.push(`${value} ${colDisplayTitle}`)
       }
-      var colTitle = cleanMaterialKey(sheet.getRange(1, col + colOffset).getValue());
 
-      if (colTitle === "rupee" && [10, 50, 200, 500].includes(value)) {
-        // ignore default pricing
-        continue;
+      if (row > 1) {
+        summaries.push([summary.join('\n')])
       }
-      var colDisplayTitle = MATERIALS_DICT?.[colTitle]
 
-      // var qtyStr = value < 10 ? value.toString().padStart(3) : value.toString();
-      summary.push(`${value} ${colDisplayTitle}`)
+      if (summaries.length === batchSize) {
+        console.log(`Updating summary for ${batchSize} rows (${row-batchSize+1}-${row})`)
+        sheet.getRange(row-batchSize+1, SUMMARY_COL, summaries.length, 1).setValues(summaries)
+        summaries = []
+      }
     }
-
-    if (row > 1) {
-      summaries.push([summary.join('\n')])
-    }
-
-    if (summaries.length === batchSize) {
-      console.log(`Updating summary for ${batchSize} rows (${row-batchSize+1}-${row})`)
-      sheet.getRange(row-batchSize+1, SUMMARY_COL, summaries.length, 1).setValues(summaries)
-      summaries = []
-    }
-  }
-  // sheet.getRange(row, SUMMARY_COL).setValue()
+    // sheet.getRange(row, SUMMARY_COL).setValue()
+  }, 'summarizeCostRows');
 }
 
 function updateAllDynamicDropdowns() {
@@ -256,103 +259,109 @@ function updateAllSummaries() {
 }
 
 function refreshArmorTracker() {
-  var activeSheet = SpreadsheetApp.getActiveSheet();
-  var trackerSheet = SpreadsheetApp.getActive().getSheetByName(TRACKER_SHEET_NAME);
-  var armorSheet = SpreadsheetApp.getActive().getSheetByName(ARMOR_SHEET_NAME);
 
-  if (activeSheet.getName() !== TRACKER_SHEET_NAME) {
-    return;
-  }
+  Singleton(() => {
+    var activeSheet = SpreadsheetApp.getActiveSheet();
+    var trackerSheet = SpreadsheetApp.getActive().getSheetByName(TRACKER_SHEET_NAME);
+    var armorSheet = SpreadsheetApp.getActive().getSheetByName(ARMOR_SHEET_NAME);
 
-  var startRow = 2;
-  var lastRow = trackerSheet.getLastRow();
-  var range = trackerSheet.getRange(startRow, 6, lastRow - startRow + 1, 5);
-  var armorRange = armorSheet.getRange(startRow, 7, lastRow - startRow + 1, 4); // Adjust column index to match ARMOR_SHEET_NAME
-  var values = range.getValues();
-  var armorValues = armorRange.getValues();
-
-  var updatedValues = [];
-  for (var i = 0; i < values.length; i++) {
-    var row = values[i];
-    var armorRow = armorValues[i];
-    var updatedRow = [];
-
-    for (var j = 0; j < row.length; j++) {
-      var currentValue = row[j];
-      var armorValue = armorRow[j - 1]; // Adjust column index to match ARMOR_SHEET_NAME
-
-      if (j > 0 && (!armorValue || currentValue.toString().toLowerCase() === "n/a")) {
-        updatedRow.push("N/A");
-      } else if (currentValue && currentValue.toString().trim() !== "") {
-        updatedRow.push("✓");
-      } else {
-        updatedRow.push(currentValue);
-      }
+    if (activeSheet.getName() !== TRACKER_SHEET_NAME) {
+      return;
     }
 
-    updatedValues.push(updatedRow);
-  }
+    var startRow = 2;
+    var lastRow = trackerSheet.getLastRow();
+    var range = trackerSheet.getRange(startRow, 6, lastRow - startRow + 1, 5);
+    var armorRange = armorSheet.getRange(startRow, 7, lastRow - startRow + 1, 4); // Adjust column index to match ARMOR_SHEET_NAME
+    var values = range.getValues();
+    var armorValues = armorRange.getValues();
 
-  range.setValues(updatedValues);
+    var updatedValues = [];
+    for (var i = 0; i < values.length; i++) {
+      var row = values[i];
+      var armorRow = armorValues[i];
+      var updatedRow = [];
+
+      for (var j = 0; j < row.length; j++) {
+        var currentValue = row[j];
+        var armorValue = armorRow[j - 1]; // Adjust column index to match ARMOR_SHEET_NAME
+
+        if (j > 0 && (!armorValue || currentValue.toString().toLowerCase() === "n/a")) {
+          updatedRow.push("N/A");
+        } else if (currentValue && currentValue.toString().trim() !== "") {
+          updatedRow.push("✓");
+        } else {
+          updatedRow.push(currentValue);
+        }
+      }
+
+      updatedValues.push(updatedRow);
+    }
+
+    range.setValues(updatedValues);
+  }, 'refreshArmorTracker');
 }
 
 function calculateMaterialSums() {
-  const costsSheet = SpreadsheetApp.getActive().getSheetByName(COSTS_SHEET_NAME);
-  const materialsSheet = SpreadsheetApp.getActive().getSheetByName(MATERIALS_SHEET_NAME);
-  const trackerSheet = SpreadsheetApp.getActive().getSheetByName(TRACKER_SHEET_NAME);
-  const startRow = 2;
-  const startCol = 5;
-  const lastRow = costsSheet.getLastRow();
 
-  const materialKeys = costsSheet.getRange(1, 1, 1, 256).getValues()[0].slice(startCol).map(cleanMaterialKey);
-  const materialValues = costsSheet.getRange(2, 1, lastRow - 1, 256).getValues(); // Assuming A:IW range
-  const materialsDict = {}; // Dictionary to store the totals and remaining values
+  Singleton(() => {
+    const costsSheet = SpreadsheetApp.getActive().getSheetByName(COSTS_SHEET_NAME);
+    const materialsSheet = SpreadsheetApp.getActive().getSheetByName(MATERIALS_SHEET_NAME);
+    const trackerSheet = SpreadsheetApp.getActive().getSheetByName(TRACKER_SHEET_NAME);
+    const startRow = 2;
+    const startCol = 5;
+    const lastRow = costsSheet.getLastRow();
 
-  const upgradesRange = trackerSheet.getRange(2, 7, trackerSheet.getLastRow() - 1, 4); // Assuming columns G to J contain the upgrades in Tracker sheet
-  const upgradesValues = upgradesRange.getValues();
+    const materialKeys = costsSheet.getRange(1, 1, 1, 256).getValues()[0].slice(startCol).map(cleanMaterialKey);
+    const materialValues = costsSheet.getRange(2, 1, lastRow - 1, 256).getValues(); // Assuming A:IW range
+    const materialsDict = {}; // Dictionary to store the totals and remaining values
 
-  for (let row = 0; row < lastRow - startRow; row += 4) {
-    const currentItem = materialValues[row];
-    const currentItemName = currentItem[3];
-    const itemId = currentItem[0];
-    const upgradeLevel = itemId ? getUpgradeLevel(upgradesValues[itemId - 1]) : null;
+    const upgradesRange = trackerSheet.getRange(2, 7, trackerSheet.getLastRow() - 1, 4); // Assuming columns G to J contain the upgrades in Tracker sheet
+    const upgradesValues = upgradesRange.getValues();
 
-    // sub-loop through this + the next three rows to get upgrade materials for this item
-    for (let subRow = 0; subRow < 4; subRow++) {
-      const itemRow = materialValues[row + subRow];
-      
-      // for each col from F to IW
-      for (let col = 0; col < materialKeys.length; col++) {
-        const key = materialKeys[col];
+    for (let row = 0; row < lastRow - startRow; row += 4) {
+      const currentItem = materialValues[row];
+      const currentItemName = currentItem[3];
+      const itemId = currentItem[0];
+      const upgradeLevel = itemId ? getUpgradeLevel(upgradesValues[itemId - 1]) : null;
 
-        // add or increment in materialsDict { [key]: total }
-        const total = itemRow.slice(startCol)[col] || 0;
+      // sub-loop through this + the next three rows to get upgrade materials for this item
+      for (let subRow = 0; subRow < 4; subRow++) {
+        const itemRow = materialValues[row + subRow];
         
-        // if current subrow is greater than upgradeLevel, add or increment { [key]: remaining } as well
-        const remaining = subRow >= upgradeLevel ? total : 0;
+        // for each col from F to IW
+        for (let col = 0; col < materialKeys.length; col++) {
+          const key = materialKeys[col];
 
-        if (key && !materialsDict?.[key]) {
-          materialsDict[key] = {
-            total: total,
-            remaining: remaining
-          };
-        } else if (key && materialsDict?.[key]) {
-          materialsDict[key].total += total;
-          materialsDict[key].remaining += remaining;
+          // add or increment in materialsDict { [key]: total }
+          const total = itemRow.slice(startCol)[col] || 0;
+          
+          // if current subrow is greater than upgradeLevel, add or increment { [key]: remaining } as well
+          const remaining = subRow >= upgradeLevel ? total : 0;
+
+          if (key && !materialsDict?.[key]) {
+            materialsDict[key] = {
+              total: total,
+              remaining: remaining
+            };
+          } else if (key && materialsDict?.[key]) {
+            materialsDict[key].total += total;
+            materialsDict[key].remaining += remaining;
+          }
         }
       }
     }
-  }
-  
-  // Write materialsDict totals to _Materials column H
-  const totalsRange = materialsSheet.getRange(2, 8, materialKeys.length, 1);
-  const totalsValues = materialKeys.map((key) => [materialsDict[key]?.total || 0]);
-  totalsRange.setValues(totalsValues);
+    
+    // Write materialsDict totals to _Materials column H
+    const totalsRange = materialsSheet.getRange(2, 8, materialKeys.length, 1);
+    const totalsValues = materialKeys.map((key) => [materialsDict[key]?.total || 0]);
+    totalsRange.setValues(totalsValues);
 
-  // Write materialsDict remaining values to _Materials column I
-  const remainingRange = materialsSheet.getRange(2, 9, materialKeys.length, 1);
-  const remainingValues = materialKeys.map((key) => [materialsDict[key]?.remaining || 0]);
-  remainingRange.setValues(remainingValues);
+    // Write materialsDict remaining values to _Materials column I
+    const remainingRange = materialsSheet.getRange(2, 9, materialKeys.length, 1);
+    const remainingValues = materialKeys.map((key) => [materialsDict[key]?.remaining || 0]);
+    remainingRange.setValues(remainingValues);
+  }, "calculateMaterialSums");
 }
 
 
