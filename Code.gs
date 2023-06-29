@@ -14,7 +14,7 @@ const SUMMARY_COL = 5
 let NUM_COSTS_COLS = 0;
 
 // Tracker
-const TRACKER_SHEET_NAME = "Tracker"
+const TRACKER_SHEET_NAME = "Armor Tracker"
 const ARMOR_SHEET_NAME = "_Armor"
 
 function cleanMaterialKey(title) {
