@@ -1,11 +1,19 @@
 # Tears of the Kingdom: Armor Tracker spreadsheet
 This is the source control for Google Apps Script code for a Tears of the Kingdom [armor tracking spreadsheet](https://docs.google.com/spreadsheets/d/12ZoT6gAKyCMGX_9u5vA5ybSgMOguCEwn0Tp2-yF_Nsk/edit?usp=sharing).
 
-Version: 1.0.3
+Version: 1.0.4
 
 ## Changelog
 
 To update, make a new copy of this sheet and copy in your inventory, or copy the App Script from this file into **Extensions** → **Apps Script** and replace the entire contents of **Code.gs** with the new version.
+
+v1.0.4
+- Code.gs is standalone; the old Globals.gs is no longer needed.
+- Batch spreadsheet reads/writes and normalize only edited armor cells.
+- Recalculate materials after armor edits and refresh-button clicks.
+- Use document locks with guaranteed release instead of persistent running flags.
+- Include every material column and match totals by material key.
+- Skip selection-change work and avoid rebuilding static summaries on open.
 
 v1.0.3
 - Added a Singleton wrapper around functions that should only run one instance at a time.

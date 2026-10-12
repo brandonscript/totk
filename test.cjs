@@ -1,0 +1,15 @@
+const fs=require('node:fs'), vm=require('node:vm'), assert=require('node:assert/strict');
+const data={_Armor:[['id'],[1,'','','','','',3,5,8,12,20]],'Armor Tracker':[['id'],[1,'','','','','✓','','','','']],_Costs:[['id','','','','summary','Type - horn','Type - rupee'],[1,'','','','',5,10],['','','','','',3,50],['','','','','',2,200],['','','','','',1,500]],_Materials:[['id','key','','name'],[1,'rupee','','Rupee'],[2,'horn','','Horn']]};
+let reads=0,released=0;const writes=[],sheets={};
+for(const [name,grid] of Object.entries(data)) sheets[name]={getName:()=>name,getLastRow:()=>grid.length,getLastColumn:()=>Math.max(...grid.map(r=>r.length)),getRange:(r,c,h=1,w=1)=>({getRow:()=>r,getLastRow:()=>r+h-1,getColumn:()=>c,getLastColumn:()=>c+w-1,getSheet:()=>sheets[name],getValues:()=>{reads++;return Array.from({length:h},(_,i)=>Array.from({length:w},(_,j)=>grid[r+i-1]?.[c+j-1]??''));},setValues:values=>{writes.push({name,r,c,values});values.forEach((row,i)=>row.forEach((v,j)=>{(grid[r+i-1]??=[])[c+j-1]=v;}));}})};
+const book={getSheetByName:name=>sheets[name]},ctx={console,SpreadsheetApp:{getActive:()=>book,flush:()=>{}},LockService:{getDocumentLock:()=>({waitLock:()=>{},releaseLock:()=>released++})}};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync('Code.gs','utf8'),ctx);
+const edit=()=>ctx.onEdit({range:sheets['Armor Tracker'].getRange(2,7),source:book});
+edit();assert.deepEqual(data._Materials.slice(1).map(r=>r.slice(7,9)),[[760,760],[11,11]]);
+data['Armor Tracker'][1][6]='x';edit();assert.equal(data['Armor Tracker'][1][6],'✓');assert.deepEqual(data._Materials.slice(1).map(r=>r.slice(7,9)),[[760,750],[11,6]]);assert.equal(writes.find(w=>w.name==='Armor Tracker').values.length,1);
+data['Armor Tracker'][1][6]='';edit();assert.equal(data._Materials[2][8],11);
+const before=reads;ctx.onEdit({range:sheets['Armor Tracker'].getRange(2,4),source:book});ctx.onSelectionChange();assert.equal(reads,before);
+ctx.updateAllSummaries();assert.equal(data._Costs[1][4],'5 Horn');assert.equal(data._Costs[4][4],'1 Horn');
+const locks=released;assert.throws(()=>ctx.withTrackerLock(()=>{throw Error('failure')}));assert.equal(released,locks+1);
+data['Armor Tracker'][1][9]='x';ctx.onEdit({range:sheets['Armor Tracker'].getRange(2,7,1,4),source:book});assert.equal(data['Armor Tracker'][1][9],'✓');
+console.log('Passed: keyed totals, final material/upgrade columns, mark/clear, scoped writes, irrelevant edits, batched summaries, lock cleanup, pasted range');
